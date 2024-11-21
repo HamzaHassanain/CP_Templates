@@ -1,6 +1,34 @@
 # My Competitive Programming Templates
 
-### This is the templates I use for competitive programming, I have created this repository to keep track of my templates and to share them with others. I will keep updating this repository with new templates and algorithms as I learn through the competitive programming journey.
+#### This is the templates I use for competitive programming, I have created this repository to keep track of my templates and to share them with others. I will keep updating this repository with new templates and algorithms as I learn through the competitive programming journey.
+
+## MakePDFS.py File
+
+This is a python script that I use to convert all the files in the repository to a single PDF file. This script uses the `enscript` CLI tool to convert the files to PDF. You can install `enscript` using the following command on Linux:
+
+Linux:
+
+```bash
+sudo apt-get install enscript
+```
+
+Windows: Will be added soon.
+
+### After Installation
+
+Just run the MakePDFS.py file and it will convert all the files in the repository to a single PDF file.
+
+Linux:
+
+```bash
+python3 MakePDFS.py
+```
+
+Windows:
+
+```bash
+python MakePDFS.py
+```
 
 ### Files
 
@@ -26,22 +54,25 @@
 - [Math](#math)
 
   - [Basic Geometry](./Math/Basic-Geometry.cpp)
-  - [Euler's Totient Function](./Math/Eulers-Totient-Function.cpp)
-  - [Extended Euclidean Algorithm](./Math/Extended-Euclidean-Algorithm.cpp)
-  - [Fraction Handler](./Math/FractionHandler.cpp)
-  - [Linear Diophantine Equation](./Math/Linear-Diophantine-Equation.cpp)
-  - [Linear Sieve](./Math/LinearSieve.cpp)
-  - [Miller Rabin](./Math/Miller-Rabin.cpp)
-  - [Mobius](./Math/Mobius.cpp)
-  - [Permutation Exponentiation](./Math/PermutationExponentiation.cpp)
-  - [Pollard's Rho](./Math/Pollards-rho.cpp)
-  - [Sieve of Eratosthenes](./Math/Sieve-of-Eratosthenes.cpp)
+
+  - [Number Theory](#number-theory)
+
+    - [Euler's Totient Function](./Math/Eulers-Totient-Function.cpp)
+    - [Extended Euclidean Algorithm](./Math/Extended-Euclidean-Algorithm.cpp)
+    - [Linear Diophantine Equation](./Math/Linear-Diophantine-Equation.cpp)
+    - [Linear Sieve](./Math/LinearSieve.cpp)
+    - [Miller Rabin](./Math/Miller-Rabin.cpp)
+    - [Mobius](./Math/Mobius.cpp)
+    - [Permutation Exponentiation](./Math/PermutationExponentiation.cpp)
+    - [Pollard's Rho](./Math/Pollards-rho.cpp)
+    - [Sieve of Eratosthenes](./Math/Sieve-of-Eratosthenes.cpp)
+    - [Combinatorics](./Math/Combinatorics.cpp)
 
   - [Data Structures](#data-structures)
-
     - [Binary Trie](./Math/BinaryTrie.cpp)
     - [Convex Hull](./Math/ConvexHull.cpp)
     - [Matrix Exponentiation](./Math/MatrixExponentiation.cpp)
+    - [Fraction Handler](./Math/FractionHandler.cpp)
 
 - [Range Queries](#range-queries)
 
