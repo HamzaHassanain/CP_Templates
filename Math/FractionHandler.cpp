@@ -2,7 +2,7 @@
 using namespace std;
 
 typedef long long ll;
-// Geometry
+
 struct Frac
 {
     ll nom, denom;

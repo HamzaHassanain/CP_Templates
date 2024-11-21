@@ -2,19 +2,6 @@
 
 ### This is the templates I use for competitive programming, I have created this repository to keep track of my templates and to share them with others. I will keep updating this repository with new templates and algorithms as I learn through the competitive programming journey.
 
-### My Competitive Programming Profiles:
-
-### <img src = "https://github.com/7oSkaaa/7oSkaaa/blob/main/Images/CP_PS.gif?raw=true" width=5%> Competitive Programming
-
-<p align="center">
-  &emsp;
-    <a href="https://codeforces.com/profile/Hamza_Hassanain"><img alt = "Codeforces" src="https://img.shields.io/badge/codeforces%20-%231F8ACB.svg?style=plastic&logo=codeforces&logoColor=white" /></a>	
-  &emsp;
-    <a href="https://leetcode.com/Hamza_Hassanain/"><img alt = "Leetcode" src="https://img.shields.io/badge/leetcode%20-%23FFA116.svg?style=plastic&logo=leetcode&logoColor=black" /></a>
-  &emsp;
-    <a href="https://www.codechef.com/users/Hamzawy00"><img alt = "CodeChef" src="https://img.shields.io/badge/codechef-%235B4638.svg?style=plastic&logo=codechef&logoColor=white" /></a>
-</p>
-
 ### Files
 
 - [Graph](#graph)
@@ -26,7 +13,7 @@
     - [Offline Dynamic Connectivity](./Graph/OfflineDynamicConnectivity.cpp)
   - [Disjoint Set Union (Union Find)](#disjoint-set-union)
     - [DSU](./Graph/DSU.cpp)
-    - [Offline Persistant DSU](./Graph/DSU-OfflinePersistant.cpp)
+    - [Offline Persistent DSU](./Graph/DSU-OfflinePersistant.cpp)
     - [DSU With RollBack](./Graph/DSU-RollBack.cpp)
     - [Timed DSU](./Graph/DSU-Timed.cpp)
     - [Weighted DSU](./Graph/DSU-Weighted.cpp)
