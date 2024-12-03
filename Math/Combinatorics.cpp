@@ -1,24 +1,24 @@
 #include <bits/stdc++.h>
 using namespace std;
 
-#define MOD 1000000007
 #define ll long long
 
-ll power(ll a, ll b)
-{
-    ll res = 1;
-    while (b)
-    {
-        if (b & 1)
-            res = (res * a) % MOD;
-        a = (a * a) % MOD;
-        b >>= 1;
-    }
-    return res;
-}
-
+template <ll MOD = 998244353>
 struct Combinatorics
 {
+    ll power(ll a, ll b)
+    {
+        ll res = 1;
+        while (b)
+        {
+            if (b & 1)
+                res = (res * a) % MOD;
+            a = (a * a) % MOD;
+            b >>= 1;
+        }
+        return res;
+    }
+
     vector<ll> fact, inv;
 
     Combinatorics(int n)

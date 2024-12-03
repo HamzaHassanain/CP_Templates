@@ -4,7 +4,7 @@
 import os
 # Get all cpp files in this folder and subfolders
 
-subfolders = ["Tree", "Strings", "Range-Queries", "Math", "Graph"]
+subfolders = ["Trees", "Strings", "Range-Queries", "Math", "Graph"]
 # make a new folder called PDFs
 
 # if there is PDFs folder, delete it and all its contents

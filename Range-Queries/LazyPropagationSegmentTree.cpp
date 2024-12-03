@@ -11,8 +11,8 @@ struct LazyPropagationSegmentTree // 1-Based Indexing
     void init(int n, long long DATA_DEFAULT = 0, long long LAZY_DEFAULT = -1)
     {
         size = 1;
-        DATA_DEFAULT = DATA_DEFAULT;
-        LAZY_DEFAULT = LAZY_DEFAULT;
+        this->DATA_DEFAULT = DATA_DEFAULT;
+        this->LAZY_DEFAULT = LAZY_DEFAULT;
 
         while (size < n)
             size *= 2;
