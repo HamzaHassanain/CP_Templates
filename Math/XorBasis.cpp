@@ -1,4 +1,3 @@
-
 struct XorBasis
 {
     vector<ll> Basis;
@@ -14,6 +13,36 @@ struct XorBasis
             mask = min(mask, mask ^ base);
         if (mask)
             Basis.push_back(mask);
+
+        // if the kth is required, we must normalize
+        normalize();
+    }
+
+    void normalize()
+    {
+        for (int i = 0; i < (int)Basis.size(); ++i)
+        {
+            for (int j = 0; j < (int)Basis.size(); ++j)
+            {
+                if (i != j && (Basis[j] & highest_bit_mask(Basis[i])) != 0)
+                {
+                    Basis[j] ^= Basis[i];
+                }
+            }
+        }
+        sort(Basis.begin(), Basis.end(),
+             [&](ll x, ll y)
+             {
+                 return highest_bit_index(x) > highest_bit_index(y);
+             });
+    }
+    ll highest_bit_mask(ll x)
+    {
+        return (1LL << (63 - __builtin_clzll(x)));
+    }
+    ll highest_bit_index(ll x)
+    {
+        return 63 - __builtin_clzll(x);
     }
 
     bool is_doable(ll mask)
@@ -22,50 +51,40 @@ struct XorBasis
             mask = min(mask, mask ^ base);
         return mask == 0;
     }
-
-    ll kth_number(ll k) // returns kth largest number that can be formed by the basis
+    ll max_number()
     {
         ll ans = 0;
-        for (ll bit = 60; ~bit; bit--)
-        {
-            ll cnt = 0;
-            for (ll base : Basis)
-                cnt += (base >> bit) & 1;
-            if (cnt < k && (ans ^ (1LL << bit)) <= ans)
-            {
-                ans ^= (1LL << bit);
-                k -= cnt;
-            }
-        }
+        for (ll base : Basis)
+            ans = max(ans, ans ^ base);
         return ans;
     }
-    ll kth_smallest_number(ll k) // returns kth smallest number that can be formed by the basis
+    ll cnt_eqaul_x(ll x, ll N) // (n is the total number of the set)
     {
-        return kth_number(cnt_numbers() - k + 1);
+        ll ans = 0;
+        for (ll base : Basis)
+            x = min(x, x ^ base);
+        if (x == 0)
+            return power(2, N - Basis.size());
+
+        return 0;
     }
-    ll cnt_numbers() // returns the number of numbers that can be formed by the basis
+    ll kth_smallest_number(ll k) // k is zero based
+    {
+
+        ll res = 0;
+        for (int i = 0; i < (int)Basis.size(); ++i)
+        {
+            if (k & (1LL << i))
+                res ^= Basis[Basis.size() - i - 1];
+        }
+        return res;
+    }
+    ll kth_largest_number(ll k) // k is zero based
+    {
+        return kth_smallest_number(cnt_numbers() - k - 1);
+    }
+    ll cnt_numbers()
     {
         return (1LL << Basis.size());
     }
 };
-
-XorBasis operator+(XorBasis a, XorBasis b)
-{
-    if (a.Basis.size() < b.Basis.size())
-        swap(a, b);
-
-    for (ll mask : b.Basis)
-        a.insert(mask);
-
-    return a;
-}
-
-XorBasis operator&(XorBasis a, ll mask)
-{
-    XorBasis res;
-    for (ll base : a.Basis)
-        res.insert(base & mask);
-    return res;
-
-    return res;
-}
