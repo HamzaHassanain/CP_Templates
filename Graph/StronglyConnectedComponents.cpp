@@ -21,21 +21,21 @@ struct SCC
     {
         int n = adj.size();
         adjList = adj;
-        inStack.resize(n);
+        inStack.assign(n, 0); // FIX 1: Use assign for safety to ensure clean state
         lowLink.resize(n);
         dfn.assign(n, -1);
         ndfn = 0;
         comp.assign(n, -1);
         comps.clear();
-        cntSrc = cntSnk = n;
-        inDeg.resize(n);
-        outDeg.resize(n);
-        dagList.resize(n);
+        // FIX 2: cntSrc/cntSnk should be initialized in computeCompGraph after comps are found
+        inDeg.assign(n, 0);
+        outDeg.assign(n, 0);
+        dagList.assign(n, vector<int>());
     }
 
     void Run()
     {
-        for (int i = 0; i < adjList.size(); i++)
+        for (int i = 0; i < (int)adjList.size(); i++)
         {
             if (dfn[i] == -1)
                 tarjan(i, -1);
@@ -48,27 +48,35 @@ struct SCC
         lowLink[node] = dfn[node] = ndfn++, inStack[node] = 1;
         stk.push(node);
 
-        for (int i = 0; i < adjList[node].size(); i++)
-        {
-            if (not DIRECTED_GRAPH && adjList[node][i] == parent)
-                continue;
-            // ignore the edge to the parent in undirected graphs
-            // (this is the only change from the directed version of the code
+        int children = 0; // FIX 3: Needed to correctly identify the root as an articulation point
 
-            // get bredges and articulation points
+        for (int i = 0; i < (int)adjList[node].size(); i++)
+        {
             int ch = adjList[node][i];
+            if (!DIRECTED_GRAPH && ch == parent)
+                continue;
+
             if (dfn[ch] == -1)
             {
+                children++;
                 tarjan(ch, node);
                 lowLink[node] = min(lowLink[node], lowLink[ch]);
-                if (lowLink[ch] > dfn[node])
-                    brdges.push_back({node, ch});
-                if (lowLink[ch] >= dfn[node])
-                    articulationPoints.push_back(node);
+                
+                // FIX 4: Only relevant for undirected graphs
+                if (!DIRECTED_GRAPH) {
+                    if (lowLink[ch] > dfn[node])
+                        brdges.push_back({node, ch});
+                    if (parent != -1 && lowLink[ch] >= dfn[node])
+                        articulationPoints.push_back(node);
+                }
             }
             else if (inStack[ch])
                 lowLink[node] = min(lowLink[node], dfn[ch]);
         }
+        
+        // FIX 5: Special case for root articulation point in undirected graphs
+        if (!DIRECTED_GRAPH && parent == -1 && children > 1)
+            articulationPoints.push_back(node);
 
         if (lowLink[node] == dfn[node])
         {
@@ -85,13 +93,19 @@ struct SCC
 
     void computeCompGraph()
     {
-        if (not DIRECTED_GRAPH)
+        if (!DIRECTED_GRAPH)
             return;
+            
         int csz = comps.size();
-        dajList.resize(csz);
-        for (int i = 0; i < adjList.size(); i++)
+        // FIX 6: Corrected typo 'dajList' to 'dagList' and reset sizes based on csz, not n
+        dagList.assign(csz, vector<int>());
+        inDeg.assign(csz, 0);
+        outDeg.assign(csz, 0);
+        cntSrc = cntSnk = csz;
+
+        for (int i = 0; i < (int)adjList.size(); i++)
         {
-            for (int j = 0; j < adjList[i].size(); j++)
+            for (int j = 0; j < (int)adjList[i].size(); j++)
             {
                 int k = adjList[i][j];
                 if (comp[k] != comp[i])
@@ -106,6 +120,7 @@ struct SCC
         }
     }
 };
+
 
 int main()
 {
