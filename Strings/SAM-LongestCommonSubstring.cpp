@@ -9,7 +9,7 @@ struct SuffixAutomaton
     struct State
     {
         int len, link;
-        int next[26];
+        int next[30];
         // FIX 1: Added `sz` to store the size of the endpos set (the frequency of the substrings in this state).
         int sz;
 
@@ -18,7 +18,7 @@ struct SuffixAutomaton
 
         State() : len(0), link(-1), sz(0)
         {
-            fill(next, next + 26, -1);
+            fill(next, next + 30, -1);
         }
     };
 
@@ -36,6 +36,7 @@ struct SuffixAutomaton
 
     void extend(char c)
     {
+        int c_index = c == '#' ? 26 : c - 'a'; // Handle the separator character
         int cur = st.size();
         st.emplace_back();
         st[cur].len = st[last].len + 1;
@@ -50,9 +51,9 @@ struct SuffixAutomaton
         pos.push_back(cur);
 
         int p = last;
-        while (p != -1 && st[p].next[c - 'a'] == -1)
+        while (p != -1 && st[p].next[c_index] == -1)
         {
-            st[p].next[c - 'a'] = cur;
+            st[p].next[c_index] = cur;
             p = st[p].link;
         }
 
@@ -62,7 +63,7 @@ struct SuffixAutomaton
         }
         else
         {
-            int q = st[p].next[c - 'a'];
+            int q = st[p].next[c_index];
             if (st[p].len + 1 == st[q].len)
             {
                 st[cur].link = q;
@@ -80,15 +81,15 @@ struct SuffixAutomaton
                 st[clone].firstpos = st[q].firstpos; // Optional: inherit the first position from q.
                 st[clone].lastpos = 0;               // will be updated in the build_frequencies function if needed.
 
-                for (int i = 0; i < 26; ++i)
+                for (int i = 0; i <= 26; ++i)
                 {
                     st[clone].next[i] = st[q].next[i];
                 }
                 st[clone].link = st[q].link;
 
-                while (p != -1 && st[p].next[c - 'a'] == q)
+                while (p != -1 && st[p].next[c_index] == q)
                 {
-                    st[p].next[c - 'a'] = clone;
+                    st[p].next[c_index] = clone;
                     p = st[p].link;
                 }
 
@@ -183,31 +184,31 @@ signed main()
 {
     ios::sync_with_stdio(false), cin.tie(nullptr);
 
-    string s;
-    cin >> s;
+    string s, t;
+    cin >> s >> t;
+
+    string combined = s + "#" + t; // Use a separator to avoid overlap
 
     SuffixAutomaton sam;
-    for (auto c : s)
+    for (auto c : combined)
     {
-        sam.extend(tolower(c));
+        sam.extend((c));
     }
 
     sam.build_frequencies();
 
-    vector<int> freq(s.size() + 1); // freq if each size
     int ans = 0;
     for (int i = 1; i < sam.st.size(); i++)
     {
         int st_len = sam.st[i].len; // Length of the substring represented by this state
-        int f_t = sam.st[i].len;    // BUT st[i].sz is the frequency of the substring represented by this state (endpos size)
 
-        if (sam.st[i].firstpos >= sam.st[i].lastpos)
-            continue;
+        int firstpos = sam.st[i].firstpos;             // First position of the substring in the combined string
+        int lastpos = sam.st[i].lastpos;               // Last position of the substring\
 
-        int t_start = sam.st[i].firstpos - st_len + 1;
-        int t_end = sam.st[i].lastpos;
-
-        ans = max(ans, f_t * f_t + (t_end - t_start + 1));
+        if (firstpos < s.size() && lastpos > s.size()) // Check if the substring occurs in both s and t
+        {
+            ans = max(ans, st_len);
+        }
     }
     cout << ans << "\n";
 }
