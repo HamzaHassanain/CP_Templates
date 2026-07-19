@@ -2,45 +2,20 @@
 #include <vector>
 #include <string>
 #include <algorithm>
-#include <bitset> // FIX 1: Included std::bitset to support masks of arbitrary compile-time sizes
-
-
-/*
-
-You enable bitmasks in a Generalized Suffix Automaton (GSAM) when the problem
-requires tracking the exact identities of the strings that contain a given substring, 
-rather than just knowing that the substring exists somewhere in the trie.
-If a problem only asks for "the number of unique substrings across all strings combined," 
-you do not need bitmasks. You only need the bitmask when the problem logic depends on intersections,
-unions, or specific string combinations.According to standard 
-competitive programming literature (such as CP-Algorithms / E-Maxx on Suffix Automata), 
-bitmasks are the standard approach when the number of strings $N$ is relatively 
-small (typically $N \le 64$ for integers, or $N \le 1000$ for std::bitset).
-
-
-
-"Longest Common Substring of $N$ strings" (where $N > 2$)"
-Appears in exactly $K$ strings" or "Appears in at least $K$ strings""
-Appears in string $A$ but NOT in string $B$" (Exclusion queries)"
-Which strings contain the pattern $P$?" (Multiple queries)"
-Number of distinct strings containing..."
-
-*/
+#include <bitset> 
 
 using namespace std;
 
-// FIX 2: Converted the struct into a template parameterized by a size_t MAX_STRINGS.
-// This allows us to instantiate the GSAM with a generic constant constraint.
 template <size_t MAX_STRINGS>
 struct GeneralSuffixAutomaton {
     struct State {
-        int len, link;
+        int len, link, sz;
         int next[26];
-        bitset<MAX_STRINGS> mask; // FIX 3: Replaced long long with std::bitset<MAX_STRINGS>
+        bitset<MAX_STRINGS> mask; 
         
-        // std::bitset is automatically default-initialized to all zeros, 
-        // so we don't need to manually clear it in the constructor.
-        State() : len(0), link(-1) { 
+        // FIX 1: Initialize sz to 0 in the constructor. 
+        // Failing to do this leaves garbage values in memory, ruining the DP addition later.
+        State() : len(0), link(-1), sz(0) { 
             fill(next, next+26, -1);
         }
     };
@@ -62,9 +37,10 @@ struct GeneralSuffixAutomaton {
             int q = st[last].next[c - 'a'];
             if (st[last].len + 1 == st[q].len) {
                 last = q;
-                // FIX 4: Use .set(index) to turn on the bit for string_id.
-                // This replaces the manual bitwise shift (1LL << string_id).
                 st[last].mask.set(string_id); 
+                // FIX 2: We traversed an existing path for a new prefix. 
+                // This state represents a valid ending position, so we increment its occurrence count.
+                st[last].sz++; 
                 return; 
             } else {
                 int clone = st.size();
@@ -84,7 +60,10 @@ struct GeneralSuffixAutomaton {
                 
                 st[q].link = clone;
                 last = clone;
-                st[last].mask.set(string_id); // FIX 4
+                st[last].mask.set(string_id); 
+                // FIX 3: The clone acts as the separated ending position for the current string's prefix.
+                // We increment its size. The original state `q` retains its own previously counted `sz`.
+                st[last].sz++; 
                 return;
             }
         }
@@ -108,6 +87,9 @@ struct GeneralSuffixAutomaton {
             } else {
                 int clone = st.size();
                 st.emplace_back(); 
+                // FIX 4: Note that we DO NOT increment sz for this clone. 
+                // This clone is purely structural for the DAG suffix links.
+                // Its sz remains 0, which is correct.
                 st[clone].len = st[p].len + 1;
                 
                 for (int i = 0; i < 26; ++i) {
@@ -124,68 +106,41 @@ struct GeneralSuffixAutomaton {
             }
         }
         last = cur;
-        st[last].mask.set(string_id); // FIX 4
+        st[last].mask.set(string_id); 
+        // FIX 5: This newly created state represents the ending position of the current prefix.
+        st[last].sz++; 
     }
-
-    // void propagateMasks() {
-    //     int max_len = 0;
-    //     for (int i = 0; i < (int)st.size(); i++) max_len = max(max_len, st[i].len);
-        
-    //     vector<vector<int>> by_len(max_len + 1);
-    //     for (int i = 1; i < (int)st.size(); i++) {
-    //         by_len[st[i].len].push_back(i);
-    //     }
-        
-    //     for (int l = max_len; l >= 1; l--) {
-    //         for (int u : by_len[l]) {
-    //             int p = st[u].link;
-    //             if (p != -1) {
-    //                 // FIX 5: std::bitset overloads the |= operator natively. 
-    //                 // This performs a highly optimized chunk-by-chunk bitwise OR 
-    //                 // between the two bitsets, behaving exactly like an integer OR.
-    //                 st[p].mask |= st[u].mask; 
-    //             }
-    //         }
-    //     }
-    // }
-
 
     void build_frequencies_and_masks() {
         int n = st.size();
         
-        // FIX 1: Find the true maximum length across all states.
-        // Using st[last].len is wrong in a GSAM because the last string 
-        // inserted might be shorter than earlier strings, which would 
-        // cause an out-of-bounds error when accessing cnt[st[i].len].
         int max_len = 0;
         for (int i = 0; i < n; i++) {
             max_len = max(max_len, st[i].len);
         }
         
-        vector<int> cnt(max_len + 1, 0); // FIX 2: Use max_len instead of st[last].len
+        vector<int> cnt(max_len + 1, 0); 
         vector<int> order(n);
         
-        // 1. Count occurrences of each length
         for (int i = 0; i < n; i++) {
             cnt[st[i].len]++;
         }
-        // 2. Prefix sums to find positions
-        for (int i = 1; i <= max_len; i++) { // FIX 3: Loop up to max_len
+        for (int i = 1; i <= max_len; i++) { 
             cnt[i] += cnt[i - 1];
         }
-        // 3. Place states in the sorted array
         for (int i = 0; i < n; i++) {
             order[--cnt[st[i].len]] = i;
         }
         
-        // 4. Traverse in reverse topological order (longest strings first)
         for (int i = n - 1; i > 0; i--) {
             int u = order[i];
             int p = st[u].link;
             
             if (p != -1) {
-                st[p].sz += st[u].sz;       // Propagate total occurrences
-                st[p].mask |= st[u].mask;   // FIX 4: Propagate bitmasks in the same pass
+                // FIX 6: The DP step safely pushes the accumulated sizes and masks 
+                // up the suffix link tree. The sz logic you provided here was already perfect.
+                st[p].sz += st[u].sz;       
+                st[p].mask |= st[u].mask;   
             }
         }
     }
@@ -199,8 +154,7 @@ struct GeneralSuffixAutomaton {
     }
 };
 
-// Define a constant for the maximum number of strings expected in a problem.
-const int MAXN = 1005; 
+const int MAXN = 11; 
 
 int main() {
     int n;
@@ -210,7 +164,6 @@ int main() {
         cin >> strings[i];
     }
     
-    // FIX 6: Instantiate the struct template with our compile-time constant constraint.
     GeneralSuffixAutomaton<MAXN> gsam;
 
     for(int i = 0; i < n; i++) {
@@ -218,8 +171,15 @@ int main() {
         for(auto& c: strings[i]) gsam.extend(c, i);
     }
     
-    gsam.propagateMasks();
+    gsam.build_frequencies_and_masks();
     
-    cout << gsam.countDistinctSubstrings() << endl;
+    // FIX 7: Added an example query to demonstrate the difference between mask and sz.
+    // Let's find the frequency and string spread of the character 'a'.
+    int state_for_a = gsam.st[0].next['a' - 'a'];
+    if (state_for_a != -1) {
+        cout << "The substring 'a' appears in " << gsam.st[state_for_a].mask.count() << " distinct strings." << endl;
+        cout << "The substring 'a' appears a TOTAL of " << gsam.st[state_for_a].sz << " times across all strings." << endl;
+    }
+   
     return 0;
 }
