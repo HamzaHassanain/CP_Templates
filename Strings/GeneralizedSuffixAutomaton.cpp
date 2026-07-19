@@ -127,24 +127,65 @@ struct GeneralSuffixAutomaton {
         st[last].mask.set(string_id); // FIX 4
     }
 
-    void propagateMasks() {
-        int max_len = 0;
-        for (int i = 0; i < (int)st.size(); i++) max_len = max(max_len, st[i].len);
+    // void propagateMasks() {
+    //     int max_len = 0;
+    //     for (int i = 0; i < (int)st.size(); i++) max_len = max(max_len, st[i].len);
         
-        vector<vector<int>> by_len(max_len + 1);
-        for (int i = 1; i < (int)st.size(); i++) {
-            by_len[st[i].len].push_back(i);
+    //     vector<vector<int>> by_len(max_len + 1);
+    //     for (int i = 1; i < (int)st.size(); i++) {
+    //         by_len[st[i].len].push_back(i);
+    //     }
+        
+    //     for (int l = max_len; l >= 1; l--) {
+    //         for (int u : by_len[l]) {
+    //             int p = st[u].link;
+    //             if (p != -1) {
+    //                 // FIX 5: std::bitset overloads the |= operator natively. 
+    //                 // This performs a highly optimized chunk-by-chunk bitwise OR 
+    //                 // between the two bitsets, behaving exactly like an integer OR.
+    //                 st[p].mask |= st[u].mask; 
+    //             }
+    //         }
+    //     }
+    // }
+
+
+    void build_frequencies_and_masks() {
+        int n = st.size();
+        
+        // FIX 1: Find the true maximum length across all states.
+        // Using st[last].len is wrong in a GSAM because the last string 
+        // inserted might be shorter than earlier strings, which would 
+        // cause an out-of-bounds error when accessing cnt[st[i].len].
+        int max_len = 0;
+        for (int i = 0; i < n; i++) {
+            max_len = max(max_len, st[i].len);
         }
         
-        for (int l = max_len; l >= 1; l--) {
-            for (int u : by_len[l]) {
-                int p = st[u].link;
-                if (p != -1) {
-                    // FIX 5: std::bitset overloads the |= operator natively. 
-                    // This performs a highly optimized chunk-by-chunk bitwise OR 
-                    // between the two bitsets, behaving exactly like an integer OR.
-                    st[p].mask |= st[u].mask; 
-                }
+        vector<int> cnt(max_len + 1, 0); // FIX 2: Use max_len instead of st[last].len
+        vector<int> order(n);
+        
+        // 1. Count occurrences of each length
+        for (int i = 0; i < n; i++) {
+            cnt[st[i].len]++;
+        }
+        // 2. Prefix sums to find positions
+        for (int i = 1; i <= max_len; i++) { // FIX 3: Loop up to max_len
+            cnt[i] += cnt[i - 1];
+        }
+        // 3. Place states in the sorted array
+        for (int i = 0; i < n; i++) {
+            order[--cnt[st[i].len]] = i;
+        }
+        
+        // 4. Traverse in reverse topological order (longest strings first)
+        for (int i = n - 1; i > 0; i--) {
+            int u = order[i];
+            int p = st[u].link;
+            
+            if (p != -1) {
+                st[p].sz += st[u].sz;       // Propagate total occurrences
+                st[p].mask |= st[u].mask;   // FIX 4: Propagate bitmasks in the same pass
             }
         }
     }
