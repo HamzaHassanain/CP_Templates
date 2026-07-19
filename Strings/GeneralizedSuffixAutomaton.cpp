@@ -1,45 +1,72 @@
 #include <iostream>
 #include <vector>
 #include <string>
+#include <algorithm>
+#include <bitset> // FIX 1: Included std::bitset to support masks of arbitrary compile-time sizes
+
+
+/*
+
+You enable bitmasks in a Generalized Suffix Automaton (GSAM) when the problem
+requires tracking the exact identities of the strings that contain a given substring, 
+rather than just knowing that the substring exists somewhere in the trie.
+If a problem only asks for "the number of unique substrings across all strings combined," 
+you do not need bitmasks. You only need the bitmask when the problem logic depends on intersections,
+unions, or specific string combinations.According to standard 
+competitive programming literature (such as CP-Algorithms / E-Maxx on Suffix Automata), 
+bitmasks are the standard approach when the number of strings $N$ is relatively 
+small (typically $N \le 64$ for integers, or $N \le 1000$ for std::bitset).
+
+
+
+"Longest Common Substring of $N$ strings" (where $N > 2$)"
+Appears in exactly $K$ strings" or "Appears in at least $K$ strings""
+Appears in string $A$ but NOT in string $B$" (Exclusion queries)"
+Which strings contain the pattern $P$?" (Multiple queries)"
+Number of distinct strings containing..."
+
+*/
 
 using namespace std;
 
-// TODO: Implement GSAM structure and functions
-// Each state should have: len, link, and next[26]
-// Provide functions to add a new string and to compute total distinct substrings
-// See solution for reference
-
+// FIX 2: Converted the struct into a template parameterized by a size_t MAX_STRINGS.
+// This allows us to instantiate the GSAM with a generic constant constraint.
+template <size_t MAX_STRINGS>
 struct GeneralSuffixAutomaton {
     struct State {
         int len, link;
         int next[26];
-        State() : len(0), link(-1) {
+        bitset<MAX_STRINGS> mask; // FIX 3: Replaced long long with std::bitset<MAX_STRINGS>
+        
+        // std::bitset is automatically default-initialized to all zeros, 
+        // so we don't need to manually clear it in the constructor.
+        State() : len(0), link(-1) { 
             fill(next, next+26, -1);
         }
     };
+    
     vector<State> st;
     int last;
+    
     GeneralSuffixAutomaton() {
         st.emplace_back();
         last = 0;
     }
     
-    // reset 'last' back to the root state (0) before processing each new string.
     void reset() {
         last = 0;
     }
 
-    void extend(char c) {
-        // If a transition for 'c' already exists from the current 'last' state, 
-        // it means another string previously inserted shared this exact prefix.
+    void extend(char c, int string_id) {
         if (st[last].next[c - 'a'] != -1) {
             int q = st[last].next[c - 'a'];
-            // Case A: The existing state is contiguous. We just advance 'last'.
             if (st[last].len + 1 == st[q].len) {
                 last = q;
-                return; // MUST return here to prevent creating duplicate states.
+                // FIX 4: Use .set(index) to turn on the bit for string_id.
+                // This replaces the manual bitwise shift (1LL << string_id).
+                st[last].mask.set(string_id); 
+                return; 
             } else {
-                // We must clone it to separate the paths, just like in standard SAM.
                 int clone = st.size();
                 st.emplace_back();
                 st[clone].len = st[last].len + 1;
@@ -57,11 +84,11 @@ struct GeneralSuffixAutomaton {
                 
                 st[q].link = clone;
                 last = clone;
+                st[last].mask.set(string_id); // FIX 4
                 return;
             }
         }
 
-        // Standard SAM extension if no transition previously existed.
         int cur = st.size();
         st.emplace_back();
         st[cur].len = st[last].len + 1;
@@ -97,17 +124,42 @@ struct GeneralSuffixAutomaton {
             }
         }
         last = cur;
+        st[last].mask.set(string_id); // FIX 4
+    }
+
+    void propagateMasks() {
+        int max_len = 0;
+        for (int i = 0; i < (int)st.size(); i++) max_len = max(max_len, st[i].len);
+        
+        vector<vector<int>> by_len(max_len + 1);
+        for (int i = 1; i < (int)st.size(); i++) {
+            by_len[st[i].len].push_back(i);
+        }
+        
+        for (int l = max_len; l >= 1; l--) {
+            for (int u : by_len[l]) {
+                int p = st[u].link;
+                if (p != -1) {
+                    // FIX 5: std::bitset overloads the |= operator natively. 
+                    // This performs a highly optimized chunk-by-chunk bitwise OR 
+                    // between the two bitsets, behaving exactly like an integer OR.
+                    st[p].mask |= st[u].mask; 
+                }
+            }
+        }
     }
 
     long long countDistinctSubstrings() {
         long long total = 0;
         for (int i = 1; i < (int)st.size(); i++) {
-            total += st[i].len - st[st[i].link].len; // this is contrubtoin 
-            // we have substrings of lenths st[st[i].link].len+1 to st[i].len
+            total += st[i].len - st[st[i].link].len; 
         }
         return total;
     }
 };
+
+// Define a constant for the maximum number of strings expected in a problem.
+const int MAXN = 1005; 
 
 int main() {
     int n;
@@ -116,18 +168,17 @@ int main() {
     for (int i = 0; i < n; ++i) {
         cin >> strings[i];
     }
-    GeneralSuffixAutomaton gsam;
+    
+    // FIX 6: Instantiate the struct template with our compile-time constant constraint.
+    GeneralSuffixAutomaton<MAXN> gsam;
 
-    for(auto& s : strings) {
-        // FIX 1: Reset the last pointer to the root state (0) before traversing a new string.
-        // This ensures the strings share the same Trie root and avoids appending 
-        // the current string to the tail of the previously processed string.
+    for(int i = 0; i < n; i++) {
         gsam.reset(); 
-        for(auto& c: s) gsam.extend(c);
+        for(auto& c: strings[i]) gsam.extend(c, i);
     }
+    
+    gsam.propagateMasks();
+    
     cout << gsam.countDistinctSubstrings() << endl;
-    // Build GSAM   
-    // Compute result
-    // Output result
     return 0;
 }
