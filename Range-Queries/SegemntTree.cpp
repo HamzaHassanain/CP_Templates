@@ -58,6 +58,46 @@ struct SegmentTree // 1-Based Indexing
 
         return operation->work(a, b);
     }
+
+    int first_index_gtEq(int left, int right, Node value, int node, int beginSeg, int endSeg)
+{
+    // 1. Completely outside the query range
+    if (beginSeg > right || left > endSeg)
+        return -1;
+
+    // 2. Completely inside the query range
+    if (beginSeg >= left && endSeg <= right) {
+        // Safe to prune: No element in this entire subtree is large enough
+        if (data[node].val < value.val)
+            return -1;
+        
+        // Base case: Leaf found within the range
+        if (beginSeg == endSeg)
+            return beginSeg;
+
+        // Efficient push-down: We know a valid index exists here, 
+        // so we navigate straight to it without range checks.
+        int mid = (beginSeg + endSeg) / 2;
+        if (data[2 * node].val >= value.val)
+            return first_index_gtEq(left, right, value, 2 * node, beginSeg, mid);
+        
+        return first_index_gtEq(left, right, value, 2 * node + 1, mid + 1, endSeg);
+    }
+
+    // 3. Partially inside the query range (Split node)
+    int mid = (beginSeg + endSeg) / 2;
+    
+    int res = first_index_gtEq(left, right, value, 2 * node, beginSeg, mid);
+    if (res != -1)
+        return res; // Found the earliest valid index in the left branch
+        
+    return first_index_gtEq(left, right, value, 2 * node + 1, mid + 1, endSeg);
+}
+    int first_index_gtEq(int left, int right, Node value)
+    {
+        return first_index_gtEq(left, right, value, 1, 1, size);
+    }
+
     Node query(int left, int right)
     {
 
