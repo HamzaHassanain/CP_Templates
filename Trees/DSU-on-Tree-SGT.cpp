@@ -14,80 +14,101 @@ void files()
     freopen("input.txt", "r", stdin), freopen("output.txt", "w", stdout);
 #endif
 }
-const int mod = 1e9 + 7;
-int power(int a, int b)
+
+#define ll long long
+
+struct Node
 {
-    int res = 1;
-    while (b)
+    int val, prf, suf, size;
+    Node() : val(0), prf(0), suf(0), size(0) {}
+    Node(int val, int prf, int suf, int size) : val(val), prf(prf), suf(suf), size(size) {}
+};
+struct Operation
+{
+    virtual Node work(Node, Node) { return Node(); }
+};
+// sgt for max conseqtuive ones in a range
+struct Sgt
+{
+    int size;
+    Node DEFAULT;
+    vector<Node> data;
+    Operation *operation;
+    Sgt(int n, Operation *operation)
     {
-        if (b & 1)
-            res = res * a % mod;
-        a = a * a % mod;
-        b >>= 1;
+        init(n, Node(0, 0, 0, 1), operation);
     }
-    return res;
-}
-
-int mul(int a, int b)
-{
-    return (a * b) % mod;
-}
-int inv(int a)
-{
-    return power(a, mod - 2);
-}
-int dive(int a, int b)
-{
-    return mul(a, inv(b));
-}
-
-struct fin
-{
-    vector<int> data;
-    int n;
-    fin(int n) : n(n)
+    void init(int n, Node DEFAULT, Operation *operation)
     {
-        data.assign(n + 1, 1);
+        size = 1;
+        this->operation = operation;
+        this->DEFAULT = DEFAULT;
+        while (size < n)
+            size *= 2;
+        data.assign(2 * size, DEFAULT);
     }
-
-    int _mul(int r)
+    void set(int i, Node value, int node, int beginSeg, int endSeg)
     {
-        int res = 1;
-
-        while (r >= 0)
+        if (beginSeg == endSeg)
         {
-            res = mul(res, data[r]);
-            r = (r & (r + 1)) - 1;
+            data[node] = value;
+            return;
         }
-        return res;
-    }
-    int get(int l, int r)
-    {
-        return dive(_mul(r), _mul(l - 1));
+
+        int mid = (beginSeg + endSeg) / 2;
+        if (i <= mid)
+            set(i, value, 2 * node, beginSeg, mid);
+        else
+            set(i, value, 2 * node + 1, mid + 1, endSeg);
+
+        data[node] = operation->work(data[2 * node], data[2 * node + 1]);
     }
 
-    void add(int idx, int val)
+    Node query(int left, int right, int node, int beginSeg, int endSeg)
     {
-        while (idx <= n)
-        {
-            data[idx] = mul(data[idx], val);
-            idx |= idx + 1;
-        }
+        if (beginSeg > right || left > endSeg)
+            return DEFAULT;
+
+        if (beginSeg >= left && endSeg <= right)
+            return data[node];
+
+        int mid = (beginSeg + endSeg) / 2;
+        Node a = this->query(left, right, 2 * node, beginSeg, mid);
+        Node b = this->query(left, right, 2 * node + 1, mid + 1, endSeg);
+
+        return operation->work(a, b);
     }
 
-    void set(int idx, int val)
+    Node query(int left, int right)
     {
-        add(idx, dive(val, get(idx, idx)));
+
+        return query(left, right, 1, 1, size);
+    }
+    void set(int i, Node value)
+    {
+        set(i, value, 1, 1, size);
+    }
+};
+struct OPS : Operation
+{
+    Node work(Node a, Node b)
+    {
+        Node ans;
+        ans.size = a.size + b.size;
+        ans.val = max({a.val, b.val, a.suf + b.prf});
+        ans.prf = (a.prf == a.size ? a.prf + b.prf : a.prf);
+        ans.suf = (b.suf == b.size ? b.suf + a.suf : b.suf);
+        return ans;
     }
 };
 
-fin f(100100ll);
-
+Sgt sgt(200100ll, new OPS());
+int freq[200100ll];
 struct sack
 {
 
     vector<vector<int>> adj;
-    vector<int> val, w;
+    vector<int> val;
     vector<int> sz, bigest;
     // queries[u] = vector of (l,r, idx)
     vector<vector<tuple<int, int, int>>> queries;
@@ -96,9 +117,9 @@ struct sack
     sack(int n, int q) : adj(1 + n), sz(1 + n), queries(1 + n), ans(1 + q), bigest(1 + n)
     {
     }
-    void set_a(vector<int> &val, vector<int> &w)
+    void set_a(vector<int> &val)
     {
-        this->val = val, this->w = w;
+        this->val = val;
     }
     void add(int u, int v)
     {
@@ -113,7 +134,6 @@ struct sack
 
     void print_ans()
     {
-
         for (int i = 1; i < (int)ans.size(); i++)
             cout << ans[i] << endl;
     }
@@ -135,9 +155,21 @@ struct sack
     void add_sub(int u, int p, bool remove = false)
     {
         if (!remove)
-            f.add(w[u], val[u]);
+        {
+            freq[val[u]]++;
+            if (freq[val[u]] == 1)
+            {
+                sgt.set(val[u], Node(1, 1, 1, 1));
+            }
+        }
         else
-            f.add(w[u], inv(val[u]));
+        {
+            freq[val[u]]--;
+            if (!freq[val[u]])
+            {
+                sgt.set(val[u], Node(0, 0, 0, 1));
+            }
+        }
 
         for (auto v : adj[u])
         {
@@ -160,8 +192,13 @@ struct sack
         if (bigest[u])
             dfs_ans(bigest[u], u, 1);
 
-        f.add(w[u], val[u]);
-
+        // f.add(w[u], val[u]);
+        // add
+        freq[val[u]]++;
+        if (freq[val[u]] == 1)
+        {
+            sgt.set(val[u], Node(1, 1, 1, 1));
+        }
         for (auto v : adj[u])
         {
             if (v == p || v == bigest[u])
@@ -171,7 +208,7 @@ struct sack
 
         for (auto [l, r, idx] : queries[u])
         {
-            ans[idx] = f.get(l, r);
+            ans[idx] = sgt.query(l, r).val;
         }
 
         if (!keeping)
@@ -189,11 +226,9 @@ void solve()
 {
     int n, q;
     cin >> n >> q;
-    vector<int> val(n + 1), w(n + 1);
+    vector<int> val(n + 1);
     for (int i = 1; i <= n; i++)
         cin >> val[i];
-    for (int i = 1; i <= n; i++)
-        cin >> w[i];
 
     sack s(n, q);
 
@@ -204,7 +239,7 @@ void solve()
         s.add(u, v);
     }
 
-    s.set_a(val, w);
+    s.set_a(val);
     int qi = 1;
     while (q--)
     {
@@ -220,6 +255,7 @@ void solve()
 
 signed main()
 {
+    memset(freq, 0, sizeof(freq));
     files();
     int t = 1;
     // cin >> t;
