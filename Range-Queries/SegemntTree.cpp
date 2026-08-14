@@ -1,23 +1,43 @@
 #include <bits/stdc++.h>
 using namespace std;
+
+#define int long long
+#define endl "\n"
+#define all(x) x.begin(), x.end()
+
+void files()
+{
+    ios_base::sync_with_stdio(0);
+    cin.tie(0);
+
+#ifndef ONLINE_JUDGE
+    freopen("input.txt", "r", stdin), freopen("output.txt", "w", stdout);
+#endif
+}
+
 #define ll long long
 
 struct Node
 {
-    long long val;
-    Node() { val = 0; }
-    Node(long long val) : val(val) {}
+    int val, prf, suf, size;
+    Node() : val(0), prf(0), suf(0), size(0) {}
+    Node(int val, int prf, int suf, int size) : val(val), prf(prf), suf(suf), size(size) {}
 };
 struct Operation
 {
     virtual Node work(Node, Node) { return Node(); }
 };
-struct SegmentTree // 1-Based Indexing
+// sgt for max conseqtuive ones in a range
+struct Sgt
 {
     int size;
     Node DEFAULT;
     vector<Node> data;
     Operation *operation;
+    Sgt(int n, Operation *operation)
+    {
+        init(n, Node(0, 0, 0, 1), operation);
+    }
     void init(int n, Node DEFAULT, Operation *operation)
     {
         size = 1;
@@ -25,7 +45,7 @@ struct SegmentTree // 1-Based Indexing
         this->DEFAULT = DEFAULT;
         while (size < n)
             size *= 2;
-        data.assign(2 * size, Node());
+        data.assign(2 * size, DEFAULT);
     }
     void set(int i, Node value, int node, int beginSeg, int endSeg)
     {
@@ -59,45 +79,6 @@ struct SegmentTree // 1-Based Indexing
         return operation->work(a, b);
     }
 
-    int first_index_gtEq(int left, int right, Node value, int node, int beginSeg, int endSeg)
-{
-    // 1. Completely outside the query range
-    if (beginSeg > right || left > endSeg)
-        return -1;
-
-    // 2. Completely inside the query range
-    if (beginSeg >= left && endSeg <= right) {
-        // Safe to prune: No element in this entire subtree is large enough
-        if (data[node].val < value.val)
-            return -1;
-        
-        // Base case: Leaf found within the range
-        if (beginSeg == endSeg)
-            return beginSeg;
-
-        // Efficient push-down: We know a valid index exists here, 
-        // so we navigate straight to it without range checks.
-        int mid = (beginSeg + endSeg) / 2;
-        if (data[2 * node].val >= value.val)
-            return first_index_gtEq(left, right, value, 2 * node, beginSeg, mid);
-        
-        return first_index_gtEq(left, right, value, 2 * node + 1, mid + 1, endSeg);
-    }
-
-    // 3. Partially inside the query range (Split node)
-    int mid = (beginSeg + endSeg) / 2;
-    
-    int res = first_index_gtEq(left, right, value, 2 * node, beginSeg, mid);
-    if (res != -1)
-        return res; // Found the earliest valid index in the left branch
-        
-    return first_index_gtEq(left, right, value, 2 * node + 1, mid + 1, endSeg);
-}
-    int first_index_gtEq(int left, int right, Node value)
-    {
-        return first_index_gtEq(left, right, value, 1, 1, size);
-    }
-
     Node query(int left, int right)
     {
 
@@ -108,56 +89,176 @@ struct SegmentTree // 1-Based Indexing
         set(i, value, 1, 1, size);
     }
 };
-struct SumOperation : Operation
+struct OPS : Operation
 {
     Node work(Node a, Node b)
     {
-        return Node(a.val + b.val);
+        Node ans;
+        ans.size = a.size + b.size;
+        ans.val = max({a.val, b.val, a.suf + b.prf});
+        ans.prf = (a.prf == a.size ? a.prf + b.prf : a.prf);
+        ans.suf = (b.suf == b.size ? b.suf + a.suf : b.suf);
+        return ans;
     }
 };
 
-int main()
+Sgt sgt(200100ll, new OPS());
+int freq[200100ll];
+struct sack
 {
 
-    int n;
+    vector<vector<int>> adj;
+    vector<int> val;
+    vector<int> sz, bigest;
+    // queries[u] = vector of (l,r, idx)
+    vector<vector<tuple<int, int, int>>> queries;
+    vector<int> ans;
 
-    cin >> n;
-
-    vector<ll> a(n);
-
-    for (int i = 0; i < n; i++)
+    sack(int n, int q) : adj(1 + n), sz(1 + n), queries(1 + n), ans(1 + q), bigest(1 + n)
     {
-        cin >> a[i];
+    }
+    void set_a(vector<int> &val)
+    {
+        this->val = val;
+    }
+    void add(int u, int v)
+    {
+        adj[u].push_back(v);
+        adj[v].push_back(u);
     }
 
-    SegmentTree st;
-    st.init(n, Node(0), new SumOperation());
-
-    for (int i = 0; i < n; i++)
+    void add_query(int u, int l, int r, int idx)
     {
-        st.set(i + 1, Node(a[i]));
+        queries[u].push_back({l, r, idx});
     }
 
-    int q;
-    cin >> q;
-
-    while (q--)
+    void print_ans()
     {
-        int type;
-        cin >> type;
-        if (type == 1)
+        for (int i = 1; i < (int)ans.size(); i++)
+            cout << ans[i] << endl;
+    }
+    void dfs_sz(int u, int p)
+    {
+        sz[u] = 1;
+        for (auto v : adj[u])
         {
-            int l, r;
-            cin >> l >> r;
-            cout << st.query(l, r).val << '\n';
+            if (v == p)
+                continue;
+            dfs_sz(v, u);
+
+            sz[u] += sz[v];
+            if (sz[v] > sz[bigest[u]])
+                bigest[u] = v;
+        }
+    }
+
+    void add_sub(int u, int p, bool remove = false)
+    {
+        if (!remove)
+        {
+            freq[val[u]]++;
+            if (freq[val[u]] == 1)
+            {
+                sgt.set(val[u], Node(1, 1, 1, 1));
+            }
         }
         else
         {
-            int idx;
-            ll val;
-            cin >> idx >> val;
-            st.set(idx, Node(val));
+            freq[val[u]]--;
+            if (!freq[val[u]])
+            {
+                sgt.set(val[u], Node(0, 0, 0, 1));
+            }
+        }
+
+        for (auto v : adj[u])
+        {
+            if (v == p)
+                continue;
+            add_sub(v, u, remove);
         }
     }
-    return 0;
+
+    void dfs_ans(int u, int p, bool keeping)
+    {
+
+        for (auto v : adj[u])
+        {
+            if (v == p || v == bigest[u])
+                continue;
+            dfs_ans(v, u, 0);
+        }
+
+        if (bigest[u])
+            dfs_ans(bigest[u], u, 1);
+
+        // f.add(w[u], val[u]);
+        // add
+        freq[val[u]]++;
+        if (freq[val[u]] == 1)
+        {
+            sgt.set(val[u], Node(1, 1, 1, 1));
+        }
+        for (auto v : adj[u])
+        {
+            if (v == p || v == bigest[u])
+                continue;
+            add_sub(v, u);
+        }
+
+        for (auto [l, r, idx] : queries[u])
+        {
+            ans[idx] = sgt.query(l, r).val;
+        }
+
+        if (!keeping)
+            add_sub(u, p, 1);
+    }
+
+    void go(int u)
+    {
+        dfs_sz(u, 0);
+        dfs_ans(u, 0, 0);
+    }
+};
+
+void solve()
+{
+    int n, q;
+    cin >> n >> q;
+    vector<int> val(n + 1);
+    for (int i = 1; i <= n; i++)
+        cin >> val[i];
+
+    sack s(n, q);
+
+    for (int i = 1; i < n; i++)
+    {
+        int u, v;
+        cin >> u >> v;
+        s.add(u, v);
+    }
+
+    s.set_a(val);
+    int qi = 1;
+    while (q--)
+    {
+        int u, l, r;
+        cin >> u >> l >> r;
+        s.add_query(u, l, r, qi++);
+    }
+
+    s.go(1);
+
+    s.print_ans();
+}
+
+signed main()
+{
+    memset(freq, 0, sizeof(freq));
+    files();
+    int t = 1;
+    // cin >> t;
+    while (t--)
+        solve();
 }
