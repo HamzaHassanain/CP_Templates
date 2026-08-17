@@ -1,2 +1,8 @@
 PDFs
 .vscode
+.texbuild/
+*.pdf
+*.aux
+*.log
+*.out
+*.toc

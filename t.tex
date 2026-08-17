@@ -1,0 +1,20 @@
+\documentclass[10pt,a4paper,twocolumn]{article}
+\usepackage{graphicx}
+\usepackage{geometry}
+\geometry{a4paper, top=1.1cm, bottom=1.1cm, left=1cm, right=1cm, columnsep=0.55cm}
+\setlength{\columnseprule}{0.4pt}
+\begin{document}
+\setlength{\topskip}{0pt}
+\setlength{\columnseprule}{0pt}
+\newgeometry{margin=0pt}
+\thispagestyle{empty}
+\noindent\makebox[0pt][l]{\raisebox{-\paperheight}[0pt][0pt]{%
+  \includegraphics[width=\paperwidth,height=\paperheight]{cover-image.jpg}}}%
+\clearpage
+\restoregeometry
+\setlength{\columnseprule}{0.4pt}
+\typeout{==BODY cw=\the\columnwidth\space tw=\the\textwidth}
+\section{Test}
+
+Body text. \rule{2cm}{1pt} more words to fill the first column so we can see wrapping into column two clearly and verify the rule renders.
+\end{document}
